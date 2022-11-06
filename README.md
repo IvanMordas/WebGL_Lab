@@ -2,7 +2,7 @@
 
 Mordas Ivan TR-22MP
 Variant 16
-![image](img1.png)
-![image](img22.png)
 
-Visit vggi-kpi.blogspot.com for more information
+![image](/img1.PNG)
+
+![image](/img2.PNG)
