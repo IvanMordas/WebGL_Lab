@@ -86,16 +86,27 @@ function draw() {
     surface.Draw();
 }
 
-function CreateSurfaceData()
-{
-    let vertexList = [];
+const CreateSurfaceData = () => {
+  let vertexList = [];
 
-    for (let i=0; i<360; i+=5) {
-        vertexList.push( Math.sin(deg2rad(i)), 1, Math.cos(deg2rad(i)) );
-        vertexList.push( Math.sin(deg2rad(i)), 0, Math.cos(deg2rad(i)) );
+  const a = 0.7;
+  const c = 1;
+  const U_MAX = 360;
+  const T_MAX = 90;
+  const teta = deg2rad(30);
+
+  for (let t = -90; t < T_MAX; t += 1) {
+    for (let u = 0; u < U_MAX; u += 1) {
+      const uRad = deg2rad(u);
+      const tRad = deg2rad(t);
+      const x = (a + tRad * Math.cos(teta) + c * (tRad * tRad) * Math.sin(teta)) * Math.cos(uRad);
+      const y = (a + tRad * Math.cos(teta) + c * (tRad * tRad) * Math.sin(teta)) * Math.sin(uRad);
+      const z = -tRad * Math.sin(teta) + c * (tRad * tRad) * Math.cos(teta); 
+      vertexList.push(x * 0.5, y * 0.5, z * 0.5)
     }
+  }
 
-    return vertexList;
+  return vertexList;
 }
 
 
