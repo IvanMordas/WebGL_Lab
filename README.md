@@ -1,5 +1,5 @@
-# WebGL
 
-Project that accompanies VGGI credit module.
+Mordas Ivan TR-22MP
+Variant 16
 
-Visit vggi-kpi.blogspot.com for more information
+![image](/Animation.gif)
