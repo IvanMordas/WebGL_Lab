@@ -30,8 +30,11 @@ function Model(name) {
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.vertexAttribPointer(shProgram.iAttribVertex, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(shProgram.iAttribVertex);
+
+        gl.vertexAttribPointer(shProgram.iNormal, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(shProgram.iNormal);    
    
-        gl.drawArrays(gl.LINE_STRIP, 0, this.count);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.count);
     }
 }
 
@@ -100,6 +103,18 @@ function draw() {
 
     gl.uniformMatrix4fv(shProgram.iModelViewProjectionMatrix, false, modelViewProjection );
     
+    gl.uniformMatrix4fv(shProgram.iNormalMatrix, false, normalMatrix);
+
+    const lightPos = Array.from(lightPositionEl.getElementsByTagName('input')).map(el => +el.value);
+    gl.uniform3fv(shProgram.iLightPos, lightPos);
+    gl.uniform3fv(shProgram.iLightVec, new Float32Array(3));
+
+    gl.uniform1f(shProgram.iShininess, 1.0);
+
+    gl.uniform3fv(shProgram.iAmbientColor, [0.2, 0.1, 0.0]);
+    gl.uniform3fv(shProgram.iDiffuseColor, [1.0, 1.0, 0.0]);
+    gl.uniform3fv(shProgram.iSpecularColor, [1.0, 1.0, 1.0]);
+
     /* Draw the six faces of a cube, with different colors. */
     gl.uniform4fv(shProgram.iColor, [1,1,0,1] );
 
@@ -152,6 +167,18 @@ function initGL() {
     shProgram.iAttribVertex              = gl.getAttribLocation(prog, "vertex");
     shProgram.iModelViewProjectionMatrix = gl.getUniformLocation(prog, "ModelViewProjectionMatrix");
     shProgram.iColor                     = gl.getUniformLocation(prog, "color");
+
+    shProgram.iNormal                    = gl.getAttribLocation(prog, 'normal');
+    shProgram.iNormalMatrix              = gl.getUniformLocation(prog, 'normalMat');
+  
+    shProgram.iAmbientColor              = gl.getUniformLocation(prog, 'ambientColor');
+    shProgram.iDiffuseColor              = gl.getUniformLocation(prog, 'diffuseColor');
+    shProgram.iSpecularColor             = gl.getUniformLocation(prog, 'specularColor');
+  
+    shProgram.iShininess                 = gl.getUniformLocation(prog, 'shininess');
+  
+    shProgram.iLightPos                  = gl.getUniformLocation(prog, 'lightPosition');
+    shProgram.iLightVec                  = gl.getUniformLocation(prog, 'lightVec');
 
     surface = new Model('Surface');
     surface.BufferData(CreateSurfaceData());
