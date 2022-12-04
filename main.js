@@ -4,6 +4,7 @@ let gl;                         // The webgl context.
 let surface;                    // A surface model
 let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
+let lightPositionEl;
 
 function deg2rad(angle) {
     return angle * Math.PI / 180;
@@ -48,6 +49,22 @@ function ShaderProgram(name, program) {
     // Location of the uniform matrix representing the combined transformation.
     this.iModelViewProjectionMatrix = -1;
 
+    // Normals
+    this.iNormal = -1;
+    this.iNormalMatrix = -1;
+
+    // Ambient, diffuse, specular
+    this.iAmbientColor = -1;
+    this.iDiffuseColor = -1;
+    this.iSpecularColor = -1;
+
+    // Shininess
+    this.iShininess = -1;
+
+    // Light position
+    this.iLightPos = -1;
+    this.iLightVec = -1;
+
     this.Use = function() {
         gl.useProgram(this.prog);
     }
@@ -63,7 +80,7 @@ function draw() {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     
     /* Set the values of the projection transformation */
-    let projection = m4.perspective(Math.PI/8, 1, 8, 12); 
+    let projection = m4.orthographic(-20, 20, -20, 20, -20, 20);
     
     /* Get the view matrix from the SimpleRotator object.*/
     let modelView = spaceball.getViewMatrix();
@@ -73,6 +90,9 @@ function draw() {
 
     let matAccum0 = m4.multiply(rotateToPointZero, modelView );
     let matAccum1 = m4.multiply(translateToPointZero, matAccum0 );
+
+    const modelviewInv = m4.inverse(matAccum1, new Float32Array(16));
+    const normalMatrix = m4.transpose(modelviewInv, new Float32Array(16));  
         
     /* Multiply the projection matrix times the modelview matrix to give the
        combined transformation matrix, and send that to the shader program. */
@@ -86,16 +106,39 @@ function draw() {
     surface.Draw();
 }
 
-function CreateSurfaceData()
-{
-    let vertexList = [];
+const CreateSurfaceData = () => {
+  let vertexList = [];
 
-    for (let i=0; i<360; i+=5) {
-        vertexList.push( Math.sin(deg2rad(i)), 1, Math.cos(deg2rad(i)) );
-        vertexList.push( Math.sin(deg2rad(i)), 0, Math.cos(deg2rad(i)) );
+  const a = 0.7;
+  const c = 1;
+  const U_MAX = 360;
+  const T_MAX = 90;
+  const teta = deg2rad(30);
+
+  for (let t = -90; t <= T_MAX; t += 1) {
+      for (let u = 0; u <= U_MAX; u += 1) {
+      const uRad = deg2rad(u);
+      const tRad = deg2rad(t);
+
+      const x = (a + tRad * Math.cos(teta) + c * (tRad * tRad) * Math.sin(teta)) * Math.cos(uRad);
+      const y = (a + tRad * Math.cos(teta) + c * (tRad * tRad) * Math.sin(teta)) * Math.sin(uRad);
+      const z = -tRad * Math.sin(teta) + c * (tRad * tRad) * Math.cos(teta); 
+
+      vertexList.push(x * 2.5, y * 2.5, z * 2.5);
+
+      const uNext = deg2rad(u + 1);
+      const tNext = deg2rad(t + 1);
+
+      const xNext = (a + tNext * Math.cos(teta) + c * (tNext * tNext) * Math.sin(teta)) * Math.cos(uNext);
+      const yNext = (a + tNext * Math.cos(teta) + c * (tNext * tNext) * Math.sin(teta)) * Math.sin(uNext);
+      const zNext = -tNext * Math.sin(teta) + c * (tNext * tNext) * Math.cos(teta); 
+
+      vertexList.push(xNext * 2.5, yNext * 2.5, zNext * 2.5);
+
     }
+  }
 
-    return vertexList;
+  return vertexList;
 }
 
 
@@ -153,6 +196,8 @@ function createProgram(gl, vShader, fShader) {
  * initialization function that will be called when the page has loaded
  */
 function init() {
+    lightPositionEl = document.getElementById('lightPostion');
+
     let canvas;
     try {
         canvas = document.getElementById("webglcanvas");
@@ -177,5 +222,10 @@ function init() {
 
     spaceball = new TrackballRotator(canvas, draw, 0);
 
+    draw();
+}
+
+function reDraw() {
+    surface.BufferData(CreateSurfaceData());
     draw();
 }
