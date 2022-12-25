@@ -30,6 +30,11 @@
     <label for="lightPostionZ">Z:</label>
     <input id="lightPostionZ" type="range" min="-20" max="20" step="1" onchange="reDraw()"/>
 </div>
+<div id="textureControls">
+    <label for="rAngle">Rotation Angle (step 1) from -180 to 180:</label>
+    <input id="rAngle" type="range" min="-180" max="180" step="1" onchange="reDraw()" />
+    <p id="userCoords"></p>
+</div>
 
 <div id="canvas-holder">
    <canvas width="700" height="700" id="webglcanvas" style="background-color:red"></canvas>
