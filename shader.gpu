@@ -34,8 +34,8 @@ mat4 getRotateMat(float angleRad) {
 
 mat4 getTranslateMat(vec2 point) {
   return mat4(
-    vec4(1.0, 0.0, 0.0, 0.0),
-    vec4(point.x, point.y, 0.0, 0.0),
+    vec4(1.0, 0.0, 0.0, point.x),
+    vec4(0.0, 1.0, 0.0, point.y),
     vec4(0.0, 0.0, 1.0, 0.0),
     vec4(0.0, 0.0, 0.0, 1.0)
   );
@@ -67,7 +67,7 @@ void main(){
   mat4 translated = getTranslateMat(-fUserPoint);
   mat4 translatedBack = getTranslateMat(fUserPoint);
 
-  vec4 tr = vec4(textureCoords, 0, 0) * translated;
+  vec4 tr = translated * vec4(textureCoords, 0, 0);
   vec4 rotated = tr * rotatedMat;
   vec4 trBack = rotated * translatedBack;
 
