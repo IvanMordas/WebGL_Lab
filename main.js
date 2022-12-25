@@ -6,6 +6,15 @@ let shProgram;                  // A shader program
 let spaceball;                  // A SimpleRotator object that lets the user rotate the view by mouse.
 let lightPositionEl;
 
+const userPoint = { x: 0, y: 0 };
+
+// FIGURE CONSTANTS
+const a = 0.7;
+const c = 1;
+const U_MAX = 360;
+const T_MAX = 90;
+const teta = deg2rad(30);
+
 function deg2rad(angle) {
     return angle * Math.PI / 180;
 }
@@ -15,12 +24,19 @@ function deg2rad(angle) {
 function Model(name) {
     this.name = name;
     this.iVertexBuffer = gl.createBuffer();
+    this.iTextureBuffer = gl.createBuffer();
     this.count = 0;
 
-    this.BufferData = function(vertices) {
+    this.BufferData = function(vertices, textureList) {
 
         gl.bindBuffer(gl.ARRAY_BUFFER, this.iVertexBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.iTextureBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(textureList), gl.STREAM_DRAW);
+
+        gl.enableVertexAttribArray(shProgram.iTextureCoords);
+        gl.vertexAttribPointer(shProgram.iTextureCoords, 2, gl.FLOAT, false, 0, 0);
 
         this.count = vertices.length/3;
     }
@@ -68,6 +84,13 @@ function ShaderProgram(name, program) {
     this.iLightPos = -1;
     this.iLightVec = -1;
 
+    // TextureCoords
+    this.iTextureCoords = -1;
+    this.iTMU = -1;
+
+    this.iFAngleRad = -1;
+    this.iFUserPoint = -1;
+
     this.Use = function() {
         gl.useProgram(this.prog);
     }
@@ -112,23 +135,35 @@ function draw() {
     gl.uniform1f(shProgram.iShininess, 1.0);
 
     gl.uniform3fv(shProgram.iAmbientColor, [0.2, 0.1, 0.0]);
-    gl.uniform3fv(shProgram.iDiffuseColor, [1.0, 1.0, 0.0]);
-    gl.uniform3fv(shProgram.iSpecularColor, [1.0, 1.0, 1.0]);
+    gl.uniform3fv(shProgram.iDiffuseColor, [0.5, 1.0, 0.0]);
+    gl.uniform3fv(shProgram.iSpecularColor, [0.5, 1.0, 1.0]);
 
     /* Draw the six faces of a cube, with different colors. */
     gl.uniform4fv(shProgram.iColor, [1,1,0,1] );
+
+    const angle = document.getElementById('rAngle').value;
+    gl.uniform1f(shProgram.iFAngleRad, deg2rad(+angle));
+  
+    const uRad = deg2rad(userPoint.x);
+    const vRad = deg2rad(userPoint.y);
+  
+    gl.uniform2fv(shProgram.iFUserPoint, [
+      (a + vRad * Math.cos(teta) + c * (vRad * vRad) * Math.sin(teta)) * Math.cos(uRad),
+      (a + vRad * Math.cos(teta) + c * (vRad * vRad) * Math.sin(teta)) * Math.sin(uRad)
+    ]);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1i(shProgram.iTMU, 0);
 
     surface.Draw();
 }
 
 const CreateSurfaceData = () => {
+  let textureList = [];
   let vertexList = [];
 
-  const a = 0.7;
-  const c = 1;
-  const U_MAX = 360;
-  const T_MAX = 90;
-  const teta = deg2rad(30);
+  let calculateTu = (u, t) => [u / U_MAX, (t + 90) / T_MAX + 90];
+  const scale = 3;
 
   for (let t = -90; t <= T_MAX; t += 1) {
       for (let u = 0; u <= U_MAX; u += 1) {
@@ -139,7 +174,8 @@ const CreateSurfaceData = () => {
       const y = (a + tRad * Math.cos(teta) + c * (tRad * tRad) * Math.sin(teta)) * Math.sin(uRad);
       const z = -tRad * Math.sin(teta) + c * (tRad * tRad) * Math.cos(teta); 
 
-      vertexList.push(x * 2.5, y * 2.5, z * 2.5);
+      vertexList.push(x * scale, y * scale, z * scale);
+      textureList.push(...calculateTu(u, t));
 
       const uNext = deg2rad(u + 1);
       const tNext = deg2rad(t + 1);
@@ -148,12 +184,16 @@ const CreateSurfaceData = () => {
       const yNext = (a + tNext * Math.cos(teta) + c * (tNext * tNext) * Math.sin(teta)) * Math.sin(uNext);
       const zNext = -tNext * Math.sin(teta) + c * (tNext * tNext) * Math.cos(teta); 
 
-      vertexList.push(xNext * 2.5, yNext * 2.5, zNext * 2.5);
-
+      vertexList.push(xNext * scale, yNext * scale, zNext * scale);
+      textureList.push(...calculateTu(u + 1, t + 1));
+      
     }
   }
 
-  return vertexList;
+  return { 
+    vertexList,
+    textureList,
+  };
 }
 
 
@@ -179,9 +219,18 @@ function initGL() {
   
     shProgram.iLightPos                  = gl.getUniformLocation(prog, 'lightPosition');
     shProgram.iLightVec                  = gl.getUniformLocation(prog, 'lightVec');
+    // TEXTURE
+    shProgram.iTextureCoords             = gl.getAttribLocation(prog, 'textureCoords');
+    shProgram.iTMU                       = gl.getUniformLocation(prog, 'tmu');
+
+    shProgram.iFAngleRad                  = gl.getUniformLocation(prog, 'fAngleRad');
+    shProgram.iFUserPoint                 = gl.getUniformLocation(prog, 'fUserPoint');
 
     surface = new Model('Surface');
-    surface.BufferData(CreateSurfaceData());
+    const { vertexList, textureList } = CreateSurfaceData();
+    surface.BufferData(vertexList, textureList);
+
+    LoadTexture();
 
     gl.enable(gl.DEPTH_TEST);
 }
@@ -253,6 +302,32 @@ function init() {
 }
 
 function reDraw() {
-    surface.BufferData(CreateSurfaceData());
-    draw();
+  const { vertexList, textureList } = CreateSurfaceData();
+  surface.BufferData(vertexList, textureList);
+  draw();
 }
+
+const LoadTexture = () => {
+  const image = new Image();
+  image.src = 'https://www.the3rdsequence.com/texturedb/download/116/texture/jpg/1024/irregular+wood+planks-1024x1024.jpg';
+  image.crossOrigin = 'anonymous';
+}
+
+window.addEventListener('keydown', function (event) {
+  switch (event.code) {
+    case 'KeyW':
+      userPoint.y = userPoint.y + 1;
+      break;
+    case 'KeyS':
+      userPoint.y = userPoint.y - 1;
+      break;
+    case 'KeyD':
+      userPoint.x = userPoint.x + 1;
+      break;
+    case 'KeyA':
+      userPoint.x = userPoint.x - 1;
+      break;
+  }
+
+  reDraw();
+});
